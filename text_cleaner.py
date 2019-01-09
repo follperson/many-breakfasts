@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from parsers import Static
-FULLREPLACE = ['\s', 'None','']
-INLINE = ['/s$', '']
+FULLREPLACE = ['^None$','^\s*$']
+INLINE = {'\s*$':'', '^\s*':''}
 
 class TextCleaners:
     class GenericCleaner:
@@ -9,8 +9,13 @@ class TextCleaners:
         INLINE = INLINE
 
     class IngredientCleaner:
-        FULLREPLACE = FULLREPLACE + ["Add all ingredients to list"]
+        FULLREPLACE = FULLREPLACE + ["$\s*Add all ingredients to list"]
         INLINE = INLINE
+
+    class DirectionCleaner:
+        FULLREPLACE = FULLREPLACE
+        INLINE = INLINE.copy().update({'\s*Watch Now$':''})
+
 
     AbstractCleaner ={'list':{
         Static.INGREDIENTS: IngredientCleaner,

@@ -3,14 +3,12 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
-import time
+from time import time as curtime
 import os
 from parsers import Static
-from utils import post_processing_list, post_processing_element
+from utils import post_processing_list, post_processing_element, random_wait
 from text_cleaner import TextCleaners
-__author__ = 'Andrew Follmann'
-__date__ = ''
-__version__ = '0.0.1'
+
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
 }
 
@@ -28,6 +26,7 @@ class AbstractRecipes(object):
         self.data = {}
         self.base_search_page = ''
         self.search_limit = 2
+        self.start_page = 1
         self.parse_functions = [[Static.TITLE, self.get_title], [Static.INGREDIENTS, self.get_ingredients],
                                 [Static.DIRECTIONS, self.get_instructions], [Static.RELATED, self.get_related],
                                 [Static.RATINGS, self.get_rating]]
@@ -36,17 +35,19 @@ class AbstractRecipes(object):
 
     def get_urls_to_parse(self):
         search_url = self.base_url + '/' + self.base_search_page
-        pageno = 1
+        pageno = self.start_page
         search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
-        while search_page.status_code != 404 and self.search_limit > pageno:
+        searches = 0
+        while search_page.status_code != 404 and self.search_limit > searches:
             if search_page.status_code == 503: # temporary off
-                time.sleep(15)
+                random_wait(60)
                 continue
             soup = BeautifulSoup(search_page.content, features='lxml')
             self.parse_search_page(soup)
             search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
             pageno += 1
-            time.sleep(2)
+            searches += 1
+            random_wait(5)
 
     def parse_search_page(self, soup):
         raise NotImplementedError
@@ -63,7 +64,6 @@ class AbstractRecipes(object):
         data = dict()
         for name, func in self.parse_functions:
             data[name] = self.call_function(func, soup=soup)
-        print(data)
         return data
 
     def get_title(self, soup):
@@ -92,19 +92,20 @@ class AbstractRecipes(object):
 
     def collect_articles(self):
         for url in self.data:
-            print(url)
-            time.sleep(2)
+            random_wait(5)
             local_html ='html-downloads/%s/%s.html' % (self.base_url.split('www')[-1].strip('.'), url.replace(self.base_url,'').strip('/').replace('/','-'))
             if os.path.exists(local_html):
+                print("Using Local Copy %s" % url)
                 with open(local_html,'rb') as html:
                     content = html.read()
             else:
+                print("Using live copy %s" % url)
                 resp = requests.get(url, headers=HEADERS)
                 if resp.status_code == 404:
                     print("Cannot find %s" %url)
                     continue
                 if resp.status_code == 503:
-                    time.sleep(10)
+                    random_wait(20)
                     continue
                 content = resp.content
                 if not os.path.exists(os.path.dirname(local_html)):
@@ -127,7 +128,8 @@ class AbstractRecipes(object):
             df[col + '_cleaned'] =df[col].apply(lambda x: post_processing_list(x, self.cleaner['list'][col]))
         for col in self.cleaner['str']:
             df[col + '_cleaned'] = df[col].apply(lambda x: post_processing_element(x, self.cleaner['str'][col].INLINE))
-        df.to_excel('scraping\\%s_data scraping_%s.xlsx' % (self.name, str(time.time()).split('.')[0]))
+        df.to_excel('scraping\\%s_data scraping_%s.xlsx' % (self.name, str(curtime()).split('.')[0]))
+
 
 
 if __name__ == '__main__':
