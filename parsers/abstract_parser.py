@@ -37,20 +37,18 @@ class AbstractRecipes(object):
         search_url = self.base_url + '/' + self.base_search_page
         pageno = self.start_page
         search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
-        searches = 0
-        while search_page.status_code != 404 and self.search_limit > searches:
+        while search_page.status_code != 404 and self.search_limit > (pageno - self.start_page):
             if search_page.status_code == 503: # temporary off
                 random_wait(60)
                 continue
             soup = BeautifulSoup(search_page.content, features='lxml')
             self.parse_search_page(soup)
-            search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
             pageno += 1
-            searches += 1
-            random_wait(5)
+            random_wait(30)
+            search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
 
     def parse_search_page(self, soup):
-        raise NotImplementedError
+        raise NotImplementedError('meant to be overwritten')
 
     def call_function(self, func, *args,**kwargs):
         try:
@@ -96,7 +94,7 @@ class AbstractRecipes(object):
             local_html ='html-downloads/%s/%s.html' % (self.base_url.split('www')[-1].strip('.'), url.replace(self.base_url,'').strip('/').replace('/','-'))
             if os.path.exists(local_html):
                 print("Using Local Copy %s" % url)
-                with open(local_html,'rb') as html:
+                with open(local_html, 'rb') as html:
                     content = html.read()
             else:
                 print("Using live copy %s" % url)
@@ -113,7 +111,11 @@ class AbstractRecipes(object):
                 with open(local_html, 'wb') as html:
                     html.write(content)
             soup = BeautifulSoup(content)
-            info = self.parse_article_page(soup)
+            try:
+                info = self.parse_article_page(soup)
+            except Exception as wow:
+                print('Serious error with url %s, : %s' % (url, wow))
+                continue
             self.data[url].update(info)
 
 

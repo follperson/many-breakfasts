@@ -22,7 +22,7 @@ class AllRecipesParser(AbstractRecipes):
     def parse_search_page(self, soup):
         for node in soup.find_all(name='article', attrs={'class': 'fixed-recipe-card'}):
             self.data[node.find_next('a').get('href')] = {'description':node.find_next('div',{'class':'fixed-recipe-card__description'}).text}
-        print(self.data)
+        print(len(self.data))
 
     def get_ingredients(self, soup):
         nodes = soup.find_all('span',{'class':'recipe-ingred_txt added'})
@@ -42,7 +42,5 @@ class AllRecipesParser(AbstractRecipes):
 
 
     def get_title(self, soup):
-        def __name__():
-            return Static.TITLE
         return soup.find('meta',{'property':'og:title'}).get('content')
 
