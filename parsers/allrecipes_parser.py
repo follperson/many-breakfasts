@@ -5,6 +5,7 @@ from text_cleaner import TextCleaners
 from utils import get_text_from_nodes
 from parsers import Static
 
+
 class AllRecipesParser(AbstractRecipes):
     def __init__(self, start_page=1, search_limit=2):
         super().__init__()
@@ -15,8 +16,9 @@ class AllRecipesParser(AbstractRecipes):
         self.base_search_page = 'recipes/78/breakfast-and-brunch/?page='
         self.search_limit = search_limit
         self.start_page = start_page
-        # self.parse_functions = [self.get_title, self.get_ingredients, self.get_instructions, self.get_related,
-        #                         self.get_rating]
+        self.parse_functions = {Static.TITLE: self.get_title, Static.INGREDIENTS: self.get_ingredients,
+                                Static.DIRECTIONS: self.get_instructions, Static.RELATED: self.get_related,
+                                Static.RATINGS: self.get_rating, Static.TAGS: self.get_tags}
         self.cleaner = TextCleaners.AllRecipes
 
     def parse_search_page(self, soup):
@@ -38,8 +40,14 @@ class AllRecipesParser(AbstractRecipes):
         return [node['href'] for node in nodes]
 
     def get_rating(self, soup):
-        return soup.find('div',{'class':'rating-stars'}).get('data-ratingstars')
+        # return soup.find('div',{'class':'rating-stars'}).get('data-ratingstars')
+        val = soup.find('meta', {'itemprop': "ratingValue"}).get('content')
+        ct = soup.find('meta', {'itemprop': "reviewCount"}).get('content')
+        return val, ct
 
+    def get_tags(self, soup):
+        nodes = soup.find_all('meta', {'itemprop': "recipeCategory"})
+        return [node['content'] for node in nodes]
 
     def get_title(self, soup):
         return soup.find('meta',{'property':'og:title'}).get('content')

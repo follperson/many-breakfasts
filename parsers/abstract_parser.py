@@ -27,21 +27,23 @@ class AbstractRecipes(object):
         self.base_search_page = ''
         self.search_limit = 2
         self.start_page = 1
-        self.parse_functions = [[Static.TITLE, self.get_title], [Static.INGREDIENTS, self.get_ingredients],
-                                [Static.DIRECTIONS, self.get_instructions], [Static.RELATED, self.get_related],
-                                [Static.RATINGS, self.get_rating]]
+        self.parse_functions = {Static.TITLE: self.get_title, Static.INGREDIENTS: self.get_ingredients,
+                                Static.DIRECTIONS: self.get_instructions, Static.RELATED: self.get_related,
+                                Static.RATINGS: self.get_rating, Static.TAGS: self.get_tags}
         self.cleaner = TextCleaners.AbstractCleaner
 
 
     def get_urls_to_parse(self):
         search_url = self.base_url + '/' + self.base_search_page
         pageno = self.start_page
-        search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
+        search_page = self.call_function(requests.get, url=search_url + str(pageno), headers=HEADERS)
+        if search_page == 'Error':
+            return
         while search_page.status_code != 404 and self.search_limit > (pageno - self.start_page):
             if search_page.status_code == 503: # temporary off
                 random_wait(60)
                 continue
-            soup = BeautifulSoup(search_page.content, features='lxml')
+            soup = BeautifulSoup(search_page.content, features='html.parser')
             self.parse_search_page(soup)
             pageno += 1
             random_wait(30)
@@ -50,9 +52,12 @@ class AbstractRecipes(object):
     def parse_search_page(self, soup):
         raise NotImplementedError('meant to be overwritten')
 
-    def call_function(self, func, *args,**kwargs):
+    def call_function(self, func, *args, **kwargs):
         try:
-            resp = func(**kwargs)
+            resp = func(*args, **kwargs)
+        except (requests.urllib3.exceptions.MaxRetryError,requests.exceptions.ConnectionError) as requests_error:
+            print(func.__name__, requests_error)
+            resp = 'Error'
         except Exception as hmm:
             print(func.__name__, hmm)
             resp = 'Error'
@@ -60,7 +65,7 @@ class AbstractRecipes(object):
 
     def parse_article_page(self, soup):
         data = dict()
-        for name, func in self.parse_functions:
+        for name, func in self.parse_functions.items():
             data[name] = self.call_function(func, soup=soup)
         return data
 
@@ -89,6 +94,8 @@ class AbstractRecipes(object):
         raise NotImplementedError('Not implemented yet')
 
     def collect_articles(self):
+        with open('static\\alt_parser_flag.txt','r') as flag:
+            alt_flag = flag.read()
         for url in self.data:
             random_wait(5)
             local_html ='html-downloads/%s/%s.html' % (self.base_url.split('www')[-1].strip('.'), url.replace(self.base_url,'').strip('/').replace('/','-'))
@@ -98,7 +105,11 @@ class AbstractRecipes(object):
                     content = html.read()
             else:
                 print("Using live copy %s" % url)
-                resp = requests.get(url, headers=HEADERS)
+                # resp = requests.get(url, headers=HEADERS)
+                resp = self.call_function(requests.get, url=url, headers=HEADERS) #**{'url':url,'headers':HEADERS})
+                if resp == 'Error':
+                    random_wait(20)
+                    continue
                 if resp.status_code == 404:
                     print("Cannot find %s" %url)
                     continue
@@ -111,6 +122,9 @@ class AbstractRecipes(object):
                 with open(local_html, 'wb') as html:
                     html.write(content)
             soup = BeautifulSoup(content)
+            if soup.contents[2]==alt_flag: # todo implement alt parser
+                print('Alt flagged', local_html)
+                continue
             try:
                 info = self.parse_article_page(soup)
             except Exception as wow:

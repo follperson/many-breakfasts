@@ -5,5 +5,6 @@ class Static:
     RATINGS = 'ratings'
     RELATED = 'related'
     TITLE = 'title'
+    TAGS = 'categories'
     AUTHOR = 'author'
     DATEPUBLISHED = 'date-published'

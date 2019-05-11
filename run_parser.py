@@ -17,7 +17,7 @@ def slowly_gather():
         parser = AllRecipesParser(start_page=current_start_page, search_limit=increment)
         parser.main()
         current_start_page += increment
-        random_wait(60 * 15)
+        random_wait(60)
 
 
 def get_all():
@@ -25,8 +25,8 @@ def get_all():
     parser.main()
 
 def main():
-    get_all()
-
+    # get_all()
+    slowly_gather()
 
 if __name__ == '__main__':
     main()
