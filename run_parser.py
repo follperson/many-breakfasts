@@ -8,7 +8,7 @@ __version__ = '0.0.4'
 
 
 def slowly_gather():
-    max_range = 1000
+    max_range = 10000
     increment = 1
     current_start_page = 1 + len([f for f in os.listdir('scraping') if '.xlsx' in f]) * increment
 
@@ -27,6 +27,7 @@ def get_all():
 def main():
     # get_all()
     slowly_gather()
+
 
 if __name__ == '__main__':
     main()
