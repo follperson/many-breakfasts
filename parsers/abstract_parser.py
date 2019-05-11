@@ -44,7 +44,7 @@ class AbstractRecipes(object):
             soup = BeautifulSoup(search_page.content, features='lxml')
             self.parse_search_page(soup)
             pageno += 1
-            random_wait(30)
+            random_wait(5)
             search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
 
     def parse_search_page(self, soup):
@@ -90,15 +90,19 @@ class AbstractRecipes(object):
 
     def collect_articles(self):
         for url in self.data:
-            random_wait(5)
             local_html ='html-downloads/%s/%s.html' % (self.base_url.split('www')[-1].strip('.'), url.replace(self.base_url,'').strip('/').replace('/','-'))
             if os.path.exists(local_html):
                 print("Using Local Copy %s" % url)
                 with open(local_html, 'rb') as html:
                     content = html.read()
             else:
+                random_wait(10) # only need to chill when using live
                 print("Using live copy %s" % url)
-                resp = requests.get(url, headers=HEADERS)
+                try:
+                    resp = requests.get(url, headers=HEADERS)
+                except requests.exceptions.ConnectionError as blocked:
+                    random_wait(60)
+                    resp = requests.get(url, headers=HEADERS)
                 if resp.status_code == 404:
                     print("Cannot find %s" %url)
                     continue

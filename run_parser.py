@@ -8,7 +8,7 @@ __version__ = '0.0.4'
 
 
 def slowly_gather():
-    max_range = 1000
+    max_range = 10000
     increment = 1
     current_start_page = 1 + len([f for f in os.listdir('scraping') if '.xlsx' in f]) * increment
 
@@ -17,15 +17,17 @@ def slowly_gather():
         parser = AllRecipesParser(start_page=current_start_page, search_limit=increment)
         parser.main()
         current_start_page += increment
-        random_wait(60 * 15)
+        random_wait(30)
 
 
 def get_all():
-    parser = AllRecipesParser(start_page=1, search_limit=500)
+    parser = AllRecipesParser(start_page=1, search_limit=100)
     parser.main()
 
+
 def main():
-    get_all()
+    # get_all()
+    slowly_gather()
 
 
 if __name__ == '__main__':

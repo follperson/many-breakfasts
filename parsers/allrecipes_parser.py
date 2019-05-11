@@ -8,11 +8,11 @@ from parsers import Static
 class AllRecipesParser(AbstractRecipes):
     def __init__(self, start_page=1, search_limit=2):
         super().__init__()
-        self.name = 'All Recipes'
+        self.name = 'All Recipes All'
         self.base_url = 'https://www.allrecipes.com'
         self.data = {}
         self.search_tags = ''
-        self.base_search_page = 'recipes/78/breakfast-and-brunch/?page='
+        self.base_search_page = 'recipes/?page='
         self.search_limit = search_limit
         self.start_page = start_page
         # self.parse_functions = [self.get_title, self.get_ingredients, self.get_instructions, self.get_related,
