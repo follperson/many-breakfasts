@@ -4,7 +4,7 @@ from utils import random_wait
 import os
 __author__ = 'Andrew Follmann'
 __date__ = ''
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 
 def slowly_gather():
@@ -24,9 +24,20 @@ def get_all():
     parser = AllRecipesParser(start_page=1, search_limit=500)
     parser.main()
 
+
+def get_local():
+    parser = AllRecipesParser(start_page=1, search_limit=500)
+    parser.main(live=False)
+
+
+# todo - add data analysis !! ( network of related, probabilites of breakfast foods ( food2vec??), popularity of breakfast foods, picture predcition?
+
+
+
 def main():
     # get_all()
-    slowly_gather()
+    get_local()
+    # slowly_gather()
 
 
 if __name__ == '__main__':

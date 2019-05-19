@@ -5,6 +5,7 @@ import nltk
 
 def load_markov_model(fp):
     df = pd.read_excel(fp)
+    # filter these
     df = df[df['related'] != 'Error']
     corpus = df['directions_cleaned'].tolist()
 

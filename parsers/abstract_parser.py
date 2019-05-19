@@ -2,7 +2,7 @@
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import re
+import multiprocessing as mp
 from time import time as curtime
 import os
 from parsers import Static
@@ -27,11 +27,11 @@ class AbstractRecipes(object):
         self.base_search_page = ''
         self.search_limit = 2
         self.start_page = 1
+        self.alt_flag = None
         self.parse_functions = {Static.TITLE: self.get_title, Static.INGREDIENTS: self.get_ingredients,
                                 Static.DIRECTIONS: self.get_instructions, Static.RELATED: self.get_related,
                                 Static.RATINGS: self.get_rating, Static.TAGS: self.get_tags}
         self.cleaner = TextCleaners.AbstractCleaner
-
 
     def get_urls_to_parse(self):
         search_url = self.base_url + '/' + self.base_search_page
@@ -48,6 +48,13 @@ class AbstractRecipes(object):
             pageno += 1
             random_wait(5)
             search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
+
+    def get_local_urls(self):
+        local_folder = 'html-downloads' + '/' + self.base_url.split('www')[-1].strip('.')
+        #self.data = {self.base_url + '/' + f.split('-')[0] + '/' + '-'.join(f.split('-')[1:]).replace('.html','/'):
+        self.data = {self.base_url + '/' +'/'.join(f.split('-')[0:2]) + '/' + '-'.join(f.split('-')[2:]).replace('.html', '/'):
+                         {'description': 'tbd'}
+                     for f in os.listdir(local_folder)}
 
     def parse_search_page(self, soup):
         raise NotImplementedError('meant to be overwritten')
@@ -68,6 +75,9 @@ class AbstractRecipes(object):
         for name, func in self.parse_functions.items():
             data[name] = self.call_function(func, soup=soup)
         return data
+
+    def get_description(self, soup):
+        raise NotImplementedError('Not implemented yet')
 
     def get_title(self, soup):
         raise NotImplementedError('Not implemented yet')
@@ -94,10 +104,11 @@ class AbstractRecipes(object):
         raise NotImplementedError('Not implemented yet')
 
     def collect_articles(self):
-        with open('static\\alt_parser_flag.txt','r') as flag:
-            alt_flag = flag.read()
+        local_folder = 'html-downloads' + '\\' + self.base_url.split('www')[-1].strip('.')
+        if not os.path.exists(local_folder):
+            os.makedirs(local_folder)
         for url in self.data:
-            local_html ='html-downloads/%s/%s.html' % (self.base_url.split('www')[-1].strip('.'), url.replace(self.base_url,'').strip('/').replace('/','-'))
+            local_html = local_folder + '\\' + url.replace(self.base_url, '').strip('/').replace('/', '-') + '.html'
             if os.path.exists(local_html):
                 print("Using Local Copy %s" % url)
                 with open(local_html, 'rb') as html:
@@ -105,8 +116,7 @@ class AbstractRecipes(object):
             else:
                 random_wait(10) # only need to chill when using live
                 print("Using live copy %s" % url)
-                # resp = requests.get(url, headers=HEADERS)
-                resp = self.call_function(requests.get, url=url, headers=HEADERS) #**{'url':url,'headers':HEADERS})
+                resp = self.call_function(requests.get, url=url, headers=HEADERS)
                 if resp == 'Error':
                     random_wait(20)
                     continue
@@ -122,7 +132,7 @@ class AbstractRecipes(object):
                 with open(local_html, 'wb') as html:
                     html.write(content)
             soup = BeautifulSoup(content)
-            if soup.contents[2]==alt_flag: # todo implement alt parser
+            if soup.contents[2] == self.alt_flag:  # todo implement alt parser
                 print('Alt flagged', local_html)
                 continue
             try:
@@ -132,19 +142,24 @@ class AbstractRecipes(object):
                 continue
             self.data[url].update(info)
 
-
-    def main(self):
-        self.get_urls_to_parse()
+    def main(self, live=True):
+        if live:
+            self.get_urls_to_parse()
+        else:
+            self.parse_functions.update({Static.DESCRIPTION: self.get_description})
+            self.get_local_urls()
         self.collect_articles()
         self.reformat_data()
 
     def reformat_data(self):
         df = pd.DataFrame().from_dict(self.data).T
+        out = 'scraping\\%s_data scraping_%s.xlsx' % (self.name, str(curtime()).split('.')[0])
+        df.to_excel(out)
         for col in self.cleaner['list']:
-            df[col + '_cleaned'] =df[col].apply(lambda x: post_processing_list(x, self.cleaner['list'][col]))
+            df[col + '_cleaned'] = df[col].apply(lambda x: x if pd.isnull(x) else post_processing_list(x, self.cleaner['list'][col]))
         for col in self.cleaner['str']:
-            df[col + '_cleaned'] = df[col].apply(lambda x: post_processing_element(x, self.cleaner['str'][col].INLINE))
-        df.to_excel('scraping\\%s_data scraping_%s.xlsx' % (self.name, str(curtime()).split('.')[0]))
+            df[col + '_cleaned'] = df[col].apply(lambda x: x if pd.isnull(x) else post_processing_element(x, self.cleaner['str'][col].INLINE))
+        df.to_excel(out)
 
 
 

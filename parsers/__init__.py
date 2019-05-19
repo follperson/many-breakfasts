@@ -1,4 +1,5 @@
 class Static:
+    DESCRIPTION = 'description'
     INGREDIENTS = 'ingredients'
     DIRECTIONS = 'directions'
     REVIEWS = 'reviews'
