@@ -2,7 +2,6 @@
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import multiprocessing as mp
 from time import time as curtime
 import os
 from parsers import Static
@@ -39,19 +38,18 @@ class AbstractRecipes(object):
         search_page = self.call_function(requests.get, url=search_url + str(pageno), headers=HEADERS)
         if search_page == 'Error':
             return
-        while search_page.status_code != 404 and self.search_limit > (pageno - self.start_page):
+        while search_page != 'Error' and search_page.status_code != 404 and self.search_limit > (pageno - self.start_page):
             if search_page.status_code == 503: # temporary off
                 random_wait(60)
                 continue
             soup = BeautifulSoup(search_page.content, features='html.parser')
             self.parse_search_page(soup)
             pageno += 1
-            random_wait(5)
-            search_page = requests.get(url=search_url + str(pageno), headers=HEADERS)
+            random_wait(15)
+            search_page = self.call_function(requests.get, url=search_url + str(pageno), headers=HEADERS)
 
     def get_local_urls(self):
         local_folder = 'html-downloads' + '/' + self.base_url.split('www')[-1].strip('.')
-        #self.data = {self.base_url + '/' + f.split('-')[0] + '/' + '-'.join(f.split('-')[1:]).replace('.html','/'):
         self.data = {self.base_url + '/' +'/'.join(f.split('-')[0:2]) + '/' + '-'.join(f.split('-')[2:]).replace('.html', '/'):
                          {'description': 'tbd'}
                      for f in os.listdir(local_folder)}
@@ -132,10 +130,10 @@ class AbstractRecipes(object):
                 with open(local_html, 'wb') as html:
                     html.write(content)
             soup = BeautifulSoup(content)
-            if soup.contents[2] == self.alt_flag:  # todo implement alt parser
-                print('Alt flagged', local_html)
-                continue
             try:
+                if soup.contents[2] == self.alt_flag:  # todo implement alt parser
+                    print('Alt flagged', local_html)
+                    continue
                 info = self.parse_article_page(soup)
             except Exception as wow:
                 print('Serious error with url %s, : %s' % (url, wow))
@@ -149,6 +147,7 @@ class AbstractRecipes(object):
             self.parse_functions.update({Static.DESCRIPTION: self.get_description})
             self.get_local_urls()
         self.collect_articles()
+        print(curtime())
         self.reformat_data()
 
     def reformat_data(self):

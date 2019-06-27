@@ -4,7 +4,7 @@ from utils import random_wait
 import os
 __author__ = 'Andrew Follmann'
 __date__ = ''
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 
 def slowly_gather():
@@ -33,10 +33,9 @@ def get_local():
 # todo - add data analysis !! ( network of related, probabilites of breakfast foods ( food2vec??), popularity of breakfast foods, picture predcition?
 
 
-
 def main():
-    # get_all()
-    get_local()
+    get_all()
+    # get_local()
     # slowly_gather()
 
 
